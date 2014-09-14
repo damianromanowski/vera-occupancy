@@ -18,9 +18,9 @@ LOG_VERBOSE="0"
 
 # Home/away sleep/wait options
 HOMESLEEP=15
-AWAYSLEEP=5
+AWAYSLEEP=1
 HOMEWAIT=5
-AWAYWAIT=2
+AWAYWAIT=1
 
 # Application paths
 ARP="/sbin/arp"
@@ -31,8 +31,8 @@ CURL="/usr/bin/curl"
 # Runtime variables (do not edit)
 KEEPGOING=1
 ISHOME=0
-SLEEP=$HOMESLEEP
-WAIT=$HOMEWAIT
+SLEEP=$AWAYSLEEP
+WAIT=$AWAYWAIT
 DOWNCOUNT=0
 NOW="date +'%Y-%m-%d %r'"
 
@@ -104,21 +104,17 @@ do
         if [ $ISHOME == "1" ];
         then
             # Check down count
-            if [ $DOWNCOUNT \> $MAX_RETRIES ];
+            if [ $DOWNCOUNT == $MAX_RETRIES ];
             then
                 # Update away status
                 ISHOME=0
                 print_log "$(eval $NOW): $DEVICE_NAME is DOWN after [$MAX_RETRIES] attempts"
                 $CURL --silent "http://$VERA_IP:3480/data_request?id=lu_action&output_format=xml&DeviceNum=$VIRTUAL_SWITCH&serviceId=urn:upnp-org:serviceId:VSwitch1&action=SetTarget&newTargetValue=0" > /dev/null
             else
-                if [ $LOG_VERBOSE == "1" ];
-                then
-                    print_log "$(eval $NOW): $DEVICE_NAME appears down, retry [$DOWNCOUNT]"
-                fi
+                print_log "$(eval $NOW): $DEVICE_NAME appears down, retry [$DOWNCOUNT]"
             fi
         fi
     fi
 
     sleep $SLEEP
 done
-
