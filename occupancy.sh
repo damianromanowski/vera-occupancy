@@ -39,16 +39,16 @@ DOWNCOUNT=0
 NOW="date +'%Y-%m-%d %r'"
 
 # Catch SIGINT SIGTERM SIGKILL
-trap '{ print_log "$(eval $NOW): >> No longer tracking occupancy for [$DEVICE_NAME]"; KEEPGOING=0; }' SIGINT SIGTERM SIGKILL
+trap '{ print_log ">> No longer tracking occupancy for [$DEVICE_NAME]"; KEEPGOING=0; }' SIGINT SIGTERM SIGKILL
 
 # Log function
 function print_log
 {
     if [ $LOG_ENABLE == "1" ];
     then
-        echo -e $1 >> $LOG_PATH
+        echo -e "$(eval $NOW): $1" >> $LOG_PATH
     fi
-    echo -e $1
+    echo -e "$(eval $NOW): $1"
 }
 
 # Clear log if need be
@@ -58,18 +58,18 @@ then
 fi
 
 # Start tracking
-print_log "$(eval $NOW): >> Starting to track occupancy for [$DEVICE_NAME]"
+print_log ">> Starting to track occupancy for [$DEVICE_NAME]"
 
 while (( KEEPGOING ));
 do
     # Ping host
     if [ $LOG_VERBOSE \> "0" ];
     then
-        print_log "$(eval $NOW): Pinging host [$DEVICE_IP]"
+        print_log "Pinging host [$DEVICE_IP]"
 
         if [ $LOG_VERBOSE \> "1" ];
         then
-            print_log "$(eval $NOW): Waiting for $WAIT sec(s)"
+            print_log "Waiting for $WAIT sec(s)"
         fi
     fi
 
@@ -81,7 +81,7 @@ do
         # Host is up
         if [ $LOG_VERBOSE \> "0" ];
         then
-            print_log "$(eval $NOW): Host [$DEVICE_IP] is UP"
+            print_log "Host [$DEVICE_IP] is UP"
         fi
 
         # Check device MAC
@@ -89,7 +89,7 @@ do
 
         if [ $LOG_VERBOSE \> "0" ];
         then
-            print_log "$(eval $NOW): Checking host MAC [$DEVICE_MAC]"
+            print_log "Checking host MAC [$DEVICE_MAC]"
         fi
 
         if [ $DEVICE_MAC == $HOST_MAC ];
@@ -101,18 +101,18 @@ do
                 ISHOME=1
                 SLEEP=$HOMESLEEP
                 WAIT=$HOMEWAIT
-                print_log "$(eval $NOW): $DEVICE_NAME is UP at [$DEVICE_IP] and MAC [$HOST_MAC] matches [$DEVICE_MAC]"
+                print_log "$DEVICE_NAME is UP at [$DEVICE_IP] and MAC [$HOST_MAC] matches [$DEVICE_MAC]"
                 $CURL --silent "http://$VERA_IP:3480/data_request?id=lu_action&output_format=xml&DeviceNum=$VIRTUAL_SWITCH&serviceId=urn:upnp-org:serviceId:VSwitch1&action=SetTarget&newTargetValue=1" > /dev/null
             else
                 if [ $LOG_VERBOSE \> "1" ];
                 then
-                    print_log "$(eval $NOW): Host MAC is still the same [$HOST_MAC]"
+                    print_log "Host MAC is still the same [$HOST_MAC]"
                 fi
             fi
         else
             # Device MAC does not match configured one
             ISHOME=0
-            print_log "$(eval $NOW): $DEVICE_NAME is UP but MAC [$HOST_MAC] does NOT match [$DEVICE_MAC] (Warning?!)"
+            print_log "$DEVICE_NAME is UP but MAC [$HOST_MAC] does NOT match [$DEVICE_MAC] (Warning?!)"
         fi
     else
         # Retry
@@ -122,7 +122,7 @@ do
 
         if [ $ISHOME == "1" ];
         then
-            print_log "$(eval $NOW): $DEVICE_NAME appears down, retry [$DOWNCOUNT]"
+            print_log "$DEVICE_NAME appears down, retry [$DOWNCOUNT]"
 
             # Check down count
             if [ $DOWNCOUNT == $MAX_RETRIES ];
@@ -131,7 +131,7 @@ do
                 ISHOME=0
                 SLEEP=$AWAYSLEEP
                 WAIT=$AWAYWAIT
-                print_log "$(eval $NOW): $DEVICE_NAME is DOWN after [$MAX_RETRIES] attempts"
+                print_log "$DEVICE_NAME is DOWN after [$MAX_RETRIES] attempts"
                 $CURL --silent "http://$VERA_IP:3480/data_request?id=lu_action&output_format=xml&DeviceNum=$VIRTUAL_SWITCH&serviceId=urn:upnp-org:serviceId:VSwitch1&action=SetTarget&newTargetValue=0" > /dev/null
             fi
         fi
@@ -139,7 +139,7 @@ do
 
     if [ $LOG_VERBOSE \> "1" ];
     then
-        print_log "$(eval $NOW): Sleeping for $SLEEP sec(s)"
+        print_log "Sleeping for $SLEEP sec(s)"
     fi
 
     sleep $SLEEP
