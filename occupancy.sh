@@ -63,18 +63,31 @@ print_log "$(eval $NOW): >> Starting to track occupancy for [$DEVICE_NAME]"
 while (( KEEPGOING ));
 do
     # Ping host
-    if [ $LOG_VERBOSE == "1" ];
+    if [ $LOG_VERBOSE \> "0" ];
     then
         print_log "$(eval $NOW): Pinging host [$DEVICE_IP]"
+
+        if [ $LOG_VERBOSE \> "1" ];
+        then
+            print_log "$(eval $NOW): Waiting for $WAIT sec(s)"
+        fi
     fi
 
     if ping -W $WAIT -c 1 $DEVICE_IP &> /dev/null
     then
+        # Reset downcount
         DOWNCOUNT=0
-        HOST_MAC="$($ARP -en | $GREP $DEVICE_IP | $AWK '{print $3}')"
+
+        # Host is up
+        if [ $LOG_VERBOSE \> "0" ];
+        then
+            print_log "$(eval $NOW): Host [$DEVICE_IP] is UP"
+        fi
 
         # Check device MAC
-        if [ $LOG_VERBOSE == "1" ];
+        HOST_MAC="$($ARP -en | $GREP $DEVICE_IP | $AWK '{print $3}')"
+
+        if [ $LOG_VERBOSE \> "0" ];
         then
             print_log "$(eval $NOW): Checking host MAC [$DEVICE_MAC]"
         fi
@@ -90,12 +103,19 @@ do
                 WAIT=$HOMEWAIT
                 print_log "$(eval $NOW): $DEVICE_NAME is UP at [$DEVICE_IP] and MAC [$HOST_MAC] matches [$DEVICE_MAC]"
                 $CURL --silent "http://$VERA_IP:3480/data_request?id=lu_action&output_format=xml&DeviceNum=$VIRTUAL_SWITCH&serviceId=urn:upnp-org:serviceId:VSwitch1&action=SetTarget&newTargetValue=1" > /dev/null
+            else
+                if [ $LOG_VERBOSE \> "1" ];
+                then
+                    print_log "$(eval $NOW): Host MAC is still the same [$HOST_MAC]"
+                fi
             fi
         else
+            # Device MAC does not match configured one
             ISHOME=0
             print_log "$(eval $NOW): $DEVICE_NAME is UP but MAC [$HOST_MAC] does NOT match [$DEVICE_MAC] (Warning?!)"
         fi
     else
+        # Retry
         DOWNCOUNT=$((DOWNCOUNT+1))
         SLEEP=$RETRYSLEEP
         WAIT=$RETRYWAIT
@@ -115,6 +135,11 @@ do
                 $CURL --silent "http://$VERA_IP:3480/data_request?id=lu_action&output_format=xml&DeviceNum=$VIRTUAL_SWITCH&serviceId=urn:upnp-org:serviceId:VSwitch1&action=SetTarget&newTargetValue=0" > /dev/null
             fi
         fi
+    fi
+
+    if [ $LOG_VERBOSE \> "1" ];
+    then
+        print_log "$(eval $NOW): Sleeping for $SLEEP sec(s)"
     fi
 
     sleep $SLEEP
