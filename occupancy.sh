@@ -16,11 +16,13 @@ LOG_PATH="/root/vera/occupancy.log"
 LOG_APPEND="1"
 LOG_VERBOSE="0"
 
-# Home/away sleep/wait options
-HOMESLEEP=15
-AWAYSLEEP=1
+# Home, away, retry sleep/wait options
+HOMESLEEP=30
 HOMEWAIT=5
+AWAYSLEEP=1
 AWAYWAIT=1
+RETRYSLEEP=2
+RETRYWAIT=2
 
 # Application paths
 ARP="/sbin/arp"
@@ -84,34 +86,33 @@ do
             then
                 # Update home status
                 ISHOME=1
+                SLEEP=$HOMESLEEP
+                WAIT=$HOMEWAIT
                 print_log "$(eval $NOW): $DEVICE_NAME is UP at [$DEVICE_IP] and MAC [$HOST_MAC] matches [$DEVICE_MAC]"
                 $CURL --silent "http://$VERA_IP:3480/data_request?id=lu_action&output_format=xml&DeviceNum=$VIRTUAL_SWITCH&serviceId=urn:upnp-org:serviceId:VSwitch1&action=SetTarget&newTargetValue=1" > /dev/null
             fi
-
-            SLEEP=$HOMESLEEP
-            WAIT=$HOMEWAIT
         else
             ISHOME=0
-            SLEEP=$HOMESLEEP
-            WAIT=$HOMEWAIT
-            print_log "$(eval $NOW): $DEVICE_NAME is UP but MAC [$HOST_MAC] does NOT match [$DEVICE_MAC]"
+            print_log "$(eval $NOW): $DEVICE_NAME is UP but MAC [$HOST_MAC] does NOT match [$DEVICE_MAC] (Warning?!)"
         fi
     else
         DOWNCOUNT=$((DOWNCOUNT+1))
-        SLEEP=$AWAYSLEEP
-        WAIT=$AWAYWAIT
+        SLEEP=$RETRYSLEEP
+        WAIT=$RETRYWAIT
 
         if [ $ISHOME == "1" ];
         then
+            print_log "$(eval $NOW): $DEVICE_NAME appears down, retry [$DOWNCOUNT]"
+
             # Check down count
             if [ $DOWNCOUNT == $MAX_RETRIES ];
             then
                 # Update away status
                 ISHOME=0
+                SLEEP=$AWAYSLEEP
+                WAIT=$AWAYWAIT
                 print_log "$(eval $NOW): $DEVICE_NAME is DOWN after [$MAX_RETRIES] attempts"
                 $CURL --silent "http://$VERA_IP:3480/data_request?id=lu_action&output_format=xml&DeviceNum=$VIRTUAL_SWITCH&serviceId=urn:upnp-org:serviceId:VSwitch1&action=SetTarget&newTargetValue=0" > /dev/null
-            else
-                print_log "$(eval $NOW): $DEVICE_NAME appears down, retry [$DOWNCOUNT]"
             fi
         fi
     fi
